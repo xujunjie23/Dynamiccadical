@@ -1,3 +1,8 @@
+#include <string>    // for std::string
+#include <cassert>   // for assert
+#include <algorithm> // for clamp if needed
+
+class Config;
 #ifndef _options_hpp_INCLUDED
 #define _options_hpp_INCLUDED
 
@@ -286,6 +291,11 @@ public:
 
   Options (Internal *);
 
+  
+  int set_option_by_pointer(const Option *opt, int value);
+  static int cadical_options_set(Options *options, const char *name, int value);
+
+
   // Makes options directly accessible, e.g., for instance declares the
   // member 'int restart' here.  This will give fast access to option values
   // internally in the solver and thus can also be used in tight loops.
@@ -340,7 +350,7 @@ public:
   // 'true' is returned and the string will be set to the name of the
   // option.  Additionally the parsed value is set (last argument).
   //
-  static bool parse_long_option (const char *, string &, int &);
+  static bool parse_long_option (const char *, std::string &, int &);
 
   // Iterating options.
 

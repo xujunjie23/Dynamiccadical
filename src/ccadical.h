@@ -10,6 +10,8 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 
+int cadical_set_option(void *options, const char *name, int new_value);
+
 // C wrapper for CaDiCaL's C++ API following IPASIR.
 
 typedef struct CCaDiCaL CCaDiCaL;

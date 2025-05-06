@@ -67,7 +67,7 @@ struct Stats {
     int64_t total;
     int64_t redundant;
     int64_t irredundant;
-  } current, added; // Clauses.
+  } current, added; // Clauses.当前子句数量和新增子句统计
 
   struct {
     double process, real;
@@ -134,7 +134,7 @@ struct Stats {
   int64_t bumped;         // seen and bumped variables in 'analyze'
   int64_t recomputed;     // recomputed glues 'recompute_glue'
   int64_t searched;       // searched decisions in 'decide'
-  int64_t reductions;     // 'reduce' counter
+  int64_t reductions;     // 'reduce' counter回收学习子句数
   int64_t reduced;        // number of reduced clauses
   int64_t collected;      // number of collected bytes
   int64_t collections;    // number of garbage collections

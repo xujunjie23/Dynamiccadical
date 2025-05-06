@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include "options.hpp"  // 注意路径正确
 
 namespace CaDiCaL {
 
@@ -68,6 +69,13 @@ using namespace CaDiCaL;
 extern "C" {
 
 #include "ccadical.h"
+
+int cadical_set_option(void *options_ptr, const char *name, int new_value) {
+  if (!options_ptr || !name) return 0;
+  CaDiCaL::Options *options = static_cast<CaDiCaL::Options *>(options_ptr);
+  return CaDiCaL::Options::cadical_options_set(options, name, new_value);
+}
+
 
 const char *ccadical_signature (void) { return Solver::signature (); }
 

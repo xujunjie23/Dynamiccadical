@@ -45,6 +45,38 @@ Internal::Internal ()
   dummy_binary = (Clause *) new char[bytes];
   memset (dummy_binary, 0, bytes);
   dummy_binary->size = 2;
+
+ // Dynamic SAT 相关初始化
+ tot_actions = DSAT_NO_ACTIONS;
+  for (int i = 0; i < tot_actions; i++) {
+    mab_reward_D[i] = 0;
+    mab_selected_D[i] = 0;
+    ucb_D[i] = 0;
+  }
+  for (int i = 0; i < DSAT_NO_CONFIGS; i++) {
+    cur_config_values[i] = DSAT_CONFIG_DEFAULT[i];
+  }
+  last_action = -1;
+
+  // 统计变量
+  last_clauses_added = 0;
+  last_clauses_deleted = 0;
+  last_conflicts = 0;
+  last_reductions = 0;
+
+  // CHB
+  step_dec_chb = 0.000001;
+  step_min_chb = 0.06;
+
+  // Dynamic SAT 相关
+  num_decisions_D = 0;
+  num_of_sampling_D = 0;
+  learned = 0;
+  tot_glue = 0;
+  mab_in_process = 1e7+1;
+  mab_reset_threshold = (stats.current.irredundant + stats.current.redundant) * 10;
+
+
 }
 
 Internal::~Internal () {
