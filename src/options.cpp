@@ -53,6 +53,33 @@ Option *Options::has (const char *name) {
 
 /*------------------------------------------------------------------------*/
 
+int Options::set_option_by_pointer(const Option *opt, int value) {
+  assert(opt >= begin());
+  assert(opt < end());
+
+  size_t idx = opt - table;
+  int &ref = val(idx);
+  int old_value = ref;
+
+  if (value == old_value)
+    return old_value;
+
+  if (value < opt->lo)
+    value = opt->lo;
+  if (value > opt->hi)
+    value = opt->hi;
+
+  ref = value;
+  return old_value;
+}
+int Options::cadical_options_set(Options *options, const char *name, int value) {
+  Option *opt = Options::has(name);  // 查找名字对应的 Option*
+  if (!opt)
+    return 0;                        // 如果找不到，返回 0 表示失败
+  return options->set_option_by_pointer(opt, value);  // 设置并返回旧值
+}
+
+
 bool Options::parse_long_option (const char *arg, string &name, int &val) {
   if (arg[0] != '-' || arg[1] != '-')
     return false;
@@ -100,7 +127,6 @@ void Options::initialize_from_environment (int &val, const char *name,
 }
 
 // Initialize all the options to their default value 'V'.
-
 Options::Options (Internal *s) : internal (s) {
   assert (number_of_options == sizeof Options::table / sizeof (Option));
 

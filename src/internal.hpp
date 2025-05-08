@@ -100,7 +100,7 @@ extern "C" {
 #include "version.hpp"
 #include "vivify.hpp"
 #include "watch.hpp"
-
+#include "dynamicsat.hpp"
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
@@ -280,6 +280,30 @@ struct Internal {
 
   Internal *internal; // proxy to 'this' in macros
   External *external; // proxy to 'external' buddy in 'Solver'
+  
+  //Dynamic SAT  
+ //Dynamic SAT
+ unsigned num_decisions_D;       // Number of variable decisions 
+ int tot_actions;                // Total number of actions
+ double mab_reward_D[DSAT_NO_ACTIONS];           // Reward for each actions 
+ double mab_selected_D[DSAT_NO_ACTIONS];         // Number of times each action is selected
+ double ucb_D[DSAT_NO_ACTIONS];                  // UCB for each action
+ int cur_config_values[DSAT_NO_CONFIGS];         // Current configuration values
+ unsigned last_conflicts, last_reductions; 
+ unsigned last_clauses_added, last_clauses_deleted;
+ unsigned mab_in_process; 
+ int last_action;                    // Last action
+ unsigned mab_reset_threshold;       // Threshold for MAB reset
+ unsigned num_of_sampling_D;         // Total number of times sampling is done
+ unsigned learned;                   // Number of learned clauses
+ unsigned tot_glue;                  // Total glue of learned clauses
+
+// CHB 
+ //先不用chb了，这个heap用到再说heap scores_chb;
+ unsigned *conflicted_chb;
+ double step_chb;
+ double step_dec_chb;
+ double step_min_chb;
 
   /*----------------------------------------------------------------------*/
 

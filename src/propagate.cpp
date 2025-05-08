@@ -35,20 +35,20 @@ static Clause *decision_reason = &decision_reason_clause;
 // assignment level is the level of the literal (since the reason clause,
 // i.e., the set of other literals, is unknown).
 
-inline int Internal::assignment_level (int lit, Clause *reason) {
+inline int Internal::assignment_level (int lit, Clause *reason) {//计算lit的决策层
 
-  assert (opts.chrono || external_prop);
+  assert (opts.chrono || external_prop);//时间回溯或外部传播
   if (!reason || reason == external_reason)
-    return level;
+    return level;//如果reason==nullptr说明lit可能是决策变量或单位子句，当前level；外部传播同样直接返回level，原来外部赋值也可能在高level
 
   int res = 0;
 
-  for (const auto &other : *reason) {
+  for (const auto &other : *reason) {//遍历原因子句
     if (other == lit)
-      continue;
+      continue;//是lit本身就跳过
     assert (val (other));
-    int tmp = var (other).level;
-    if (tmp > res)
+    int tmp = var (other).level;//获取other的决策层
+    if (tmp > res)//记录最高的决策层
       res = tmp;
   }
 
@@ -105,13 +105,13 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   if (level)
     require_mode (SEARCH);
 
-  const int idx = vidx (lit);
+  const int idx = vidx (lit);//获取lit文字的索引idx
   const bool from_external = reason == external_reason;
   assert (!val (idx));
   assert (!flags (idx).eliminated () || reason == decision_reason ||
           reason == external_reason);
-  Var &v = var (idx);
-  int lit_level;
+  Var &v = var (idx);//结构体，包含变量的各种信息（如赋值级别、原因等）
+  int lit_level;//lit的决策层
   assert (!lrat || level || reason == external_reason ||
           reason == decision_reason || !lrat_chain.empty ());
   // The following cases are explained in the two comments above before
@@ -125,31 +125,33 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   // The function assignment_level () will also assign the current level
   // to literals with external reason.
   if (!reason)
-    lit_level = 0; // unit
+    lit_level = 0; // 如果reason为nullptr说明lit没有推导原因是单位子句，将决策层定为0
   else if (reason == decision_reason)
-    lit_level = level, reason = 0;
-  else if (opts.chrono)
-    lit_level = assignment_level (lit, reason);
+    lit_level = level, reason = 0;//如果是一个决策变量，赋值层就是当前level，并清空reason（因为不是传播）
+  else if (opts.chrono)//如果启用时间顺序回溯，调用函数计算level
+    lit_level = assignment_level (lit, reason);//计算被传播时的决策层，reason指向原因子句
   else
     lit_level = level;
   if (!lit_level)
-    reason = 0;
+    reason = 0;//如果是根级别赋值，清空reason
 
   v.level = lit_level;
   v.trail = trail.size ();
   v.reason = reason;
   assert ((int) num_assigned < max_var);
   assert (num_assigned == trail.size ());
-  num_assigned++;
-  if (!lit_level && !from_external)
+  num_assigned++;//更新已赋值变量个数
+  if (!lit_level && !from_external)//若lit是根级别赋值且不是外部推导，用函数记录该单位子句，可以优化之后搜索
     learn_unit_clause (lit); // increases 'stats.fixed'
   assert (lit_level || !from_external);
   const signed char tmp = sign (lit);
-  set_val (idx, tmp);
+
+  set_val (idx, tmp);//将lit赋值！！！！！！！但是为什么引idx不用lit？？？？？？？？
+
   assert (val (lit) > 0);  // Just a bit paranoid but useful.
   assert (val (-lit) < 0); // Ditto.
   if (!searching_lucky_phases)
-    phases.saved[idx] = tmp; // phase saving during search
+    phases.saved[idx] = tmp; //记录变量的相位，允许回溯后优先尝试上次成功的赋值
   trail.push_back (lit);
 #ifdef LOGGING
   if (!lit_level)
@@ -159,8 +161,8 @@ inline void Internal::search_assign (int lit, Clause *reason) {
 #endif
 
   if (watching ()) {
-    const Watches &ws = watches (-lit);
-    if (!ws.empty ()) {
+    const Watches &ws = watches (-lit);//返回以-lit为监视的子句列表，因为-lit为false可能导致单位子句或冲突
+    if (!ws.empty ()) {//但是这段代码并不直接实施检查，只是将这些ws放到缓存，为之后准备。
       const Watch &w = ws[0];
       __builtin_prefetch (&w, 0, 1);
     }

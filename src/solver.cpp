@@ -26,7 +26,7 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 
 // Log state transitions.
-
+//避免重复切换到相同状态，强制s只能是2的幂，因为状态用位掩码init1，solving2，sat4，unsat8，记录日志
 #define STATE(S) \
   do { \
     assert (is_power_of_two (S)); \
@@ -37,27 +37,28 @@ namespace CaDiCaL {
          tout.normal_code ()); \
   } while (0)
 
+  //将求解器转到steady状态，并执行一些清理检查操作
 void Solver::transition_to_steady_state () {
-  if (state () == CONFIGURING) {
-    LOG ("API leaves state %sCONFIGURING%s", tout.emph_code (),
+  if (state () == CONFIGURING) {//处理configuring状态
+    LOG ("API leaves state %sCONFIGURING%s", tout.emph_code (),//记录日志
          tout.normal_code ());
     if (internal->opts.check && internal->opts.checkproof) {
-      internal->check ();
+      internal->check ();//验证配置是否正确
     }
-  } else if (state () == SATISFIED) {
+  } else if (state () == SATISFIED) {//处理satisfied状态
     LOG ("API leaves state %sSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
-    external->reset_assumptions ();
-    external->reset_concluded ();
-    external->reset_constraint ();
-  } else if (state () == UNSATISFIED) {
+    external->reset_assumptions ();//重置所有假设变量
+    external->reset_concluded ();//清除已推导结论
+    external->reset_constraint ();//清楚外部约束
+  } else if (state () == UNSATISFIED) {//处理unsatsfied状态
     LOG ("API leaves state %sUNSATISFIED%s", tout.emph_code (),
          tout.normal_code ());
-    external->reset_assumptions ();
+    external->reset_assumptions ();//和sat一样清理外部状态
     external->reset_concluded ();
     external->reset_constraint ();
   }
-  if (state () != STEADY)
+  if (state () != STEADY)//切换到steady状态，也就是空闲状态，可以接受新输入，或开始新的求解
     STATE (STEADY);
 }
 
@@ -248,6 +249,7 @@ static void log_api_call_returns (Internal *internal, const char *name,
 #ifndef NTRACING
 /*------------------------------------------------------------------------*/
 
+//记录API调用日志，将信息写入trace_api_file文件，跟踪API调用过程
 #define TRACE(...) \
   do { \
     /*if ((this == 0)) break; */ /* gcc-12 produces warning */ \
@@ -315,6 +317,7 @@ static bool tracing_api_calls_through_environment_variable_method;
 
 static bool tracing_nb_lidrup_env_var_method = false;
 
+//solver类的构造函数，初始化solver实例
 Solver::Solver () {
 
 #ifndef NTRACING
@@ -375,6 +378,7 @@ Solver::Solver () {
   delete_external.release ();
 }
 
+//solver类的析构函数，销魂实例，清理工作
 Solver::~Solver () {
 
   TRACE ("reset");
@@ -418,10 +422,10 @@ Solver::~Solver () {
   }
 #endif
 }
-
+//一些成员函数
 /*------------------------------------------------------------------------*/
 
-int Solver::vars () {
+int Solver::vars () {//返回变量最大索引，可能是变量数量
   TRACE ("vars");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   int res = external->max_var;
@@ -429,7 +433,7 @@ int Solver::vars () {
   return res;
 }
 
-void Solver::reserve (int min_max_var) {
+void Solver::reserve (int min_max_var) {//预留求解器所需资源来支持最大变量数
   TRACE ("reserve", min_max_var);
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
@@ -441,7 +445,7 @@ void Solver::reserve (int min_max_var) {
 /*------------------------------------------------------------------------*/
 #ifndef NTRACING
 
-void Solver::trace_api_calls (FILE *file) {
+void Solver::trace_api_calls (FILE *file) {//用于启动 API调用的追踪
   LOG_API_CALL_BEGIN ("trace_api_calls");
   REQUIRE_VALID_STATE ();
   REQUIRE (file != 0, "invalid zero file argument");
@@ -457,26 +461,26 @@ void Solver::trace_api_calls (FILE *file) {
 #endif
 /*------------------------------------------------------------------------*/
 
-bool Solver::is_valid_option (const char *name) {
+bool Solver::is_valid_option (const char *name) {//检查给的name是不是有效
   return Options::has (name);
 }
 
-bool Solver::is_preprocessing_option (const char *name) {
+bool Solver::is_preprocessing_option (const char *name) {//检查name是不是预处理选项
   return Options::is_preprocessing_option (name);
 }
 
-bool Solver::is_valid_long_option (const char *arg) {
+bool Solver::is_valid_long_option (const char *arg) {//检查长选项arg是不是有效
   string name;
   int tmp;
   return Options::parse_long_option (arg, name, tmp);
 }
 
-int Solver::get (const char *arg) {
+int Solver::get (const char *arg) {//获取arg的值
   REQUIRE_VALID_OR_SOLVING_STATE ();
   return internal->opts.get (arg);
 }
 
-bool Solver::set (const char *arg, int val) {
+bool Solver::set (const char *arg, int val) {//设置arg的值为val
   TRACE ("set", arg, val);
   REQUIRE_VALID_STATE ();
   if (strcmp (arg, "log") && strcmp (arg, "quiet") &&
@@ -492,7 +496,7 @@ bool Solver::set (const char *arg, int val) {
   return res;
 }
 
-bool Solver::set_long_option (const char *arg) {
+bool Solver::set_long_option (const char *arg) {//设置长选项
   LOG_API_CALL_BEGIN ("set", arg);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
@@ -511,14 +515,14 @@ bool Solver::set_long_option (const char *arg) {
   return res;
 }
 
-void Solver::optimize (int arg) {
+void Solver::optimize (int arg) {//优化选项
   LOG_API_CALL_BEGIN ("optimize", arg);
   REQUIRE_VALID_STATE ();
   internal->opts.optimize (arg);
   LOG_API_CALL_END ("optimize", arg);
 }
 
-bool Solver::limit (const char *arg, int val) {
+bool Solver::limit (const char *arg, int val) {//设置限制
   TRACE ("limit", arg, val);
   REQUIRE_VALID_STATE ();
   bool res = internal->limit (arg, val);
@@ -526,22 +530,22 @@ bool Solver::limit (const char *arg, int val) {
   return res;
 }
 
-bool Solver::is_valid_limit (const char *arg) {
+bool Solver::is_valid_limit (const char *arg) {//检查给定限制arg是否有效
   return Internal::is_valid_limit (arg);
 }
 
-void Solver::prefix (const char *str) {
+void Solver::prefix (const char *str) {//设置前缀
   LOG_API_CALL_BEGIN ("prefix", str);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   internal->prefix = str;
   LOG_API_CALL_END ("prefix", str);
 }
 
-bool Solver::is_valid_configuration (const char *name) {
+bool Solver::is_valid_configuration (const char *name) {//检查配置name是否有效
   return Config::has (name);
 }
 
-bool Solver::configure (const char *name) {
+bool Solver::configure (const char *name) {//设置配置选项
   TRACE ("configure", name);
   LOG_API_CALL_BEGIN ("configure", name);
   REQUIRE_VALID_STATE ();
