@@ -5,7 +5,7 @@ namespace CaDiCaL {
 /*------------------------------------------------------------------------*/
 static Clause external_reason_clause;
 
-Internal::Internal ()
+Internal::Internal ()//初始化类的初始化函数
     : mode (SEARCH), unsat (false), iterating (false),
       localsearching (false), lookingahead (false), preprocessing (false),
       protected_reasons (false), force_saved_phase (false),
@@ -49,6 +49,7 @@ Internal::Internal ()
  // Dynamic SAT 相关初始化
  tot_actions = DSAT_NO_ACTIONS;
   for (int i = 0; i < tot_actions; i++) {
+
     mab_reward_D[i] = 0;
     mab_selected_D[i] = 0;
     ucb_D[i] = 0;
@@ -67,14 +68,16 @@ Internal::Internal ()
   // CHB
   step_dec_chb = 0.000001;
   step_min_chb = 0.06;
+  step_chb = 0.4;  // 举个例子，跟 CaDiCaL 默认设置一致
 
   // Dynamic SAT 相关
   num_decisions_D = 0;
   num_of_sampling_D = 0;
   learned = 0;
   tot_glue = 0;
-  mab_in_process = 1e7+1;
+  mab_in_process = 10000001u;
   mab_reset_threshold = (stats.current.irredundant + stats.current.redundant) * 10;
+
 
 
 }
@@ -288,14 +291,14 @@ void Internal::reserve_ids (int number) {
 /*------------------------------------------------------------------------*/
 
 // This is the main CDCL loop with interleaved inprocessing.
-
-int Internal::cdcl_loop_with_inprocessing () {
+//CDCL循环求解包括传播、分析、决策、重启等
+int Internal::cdcl_loop_with_inprocessing () {//0表示继续，20表示unsat，10表示找到解
 
   int res = 0;
 
   START (search);
 
-  if (stable) {
+  if (stable) {//根据stable变量决定是稳定模式还是不稳定模式
     START (stable);
     report ('[');
   } else {
@@ -308,11 +311,11 @@ int Internal::cdcl_loop_with_inprocessing () {
       res = 20;
     else if (unsat_constraint)
       res = 20;
-    else if (!propagate ())
-      analyze (); // propagate and analyze
-    else if (iterating)
+    else if (!propagate ())//发生了冲突就分析
+      analyze (); 
+    else if (iterating)//如果正在迭代，调用迭代函数
       iterate ();                               // report learned unit
-    else if (!external_propagate () || unsat) { // external propagation
+    else if (!external_propagate () || unsat) { // 外部传播失败或不可满足
       if (unsat)
         continue;
       else

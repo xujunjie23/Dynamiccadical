@@ -119,7 +119,10 @@ Clause *Internal::new_clause (bool red, int glue) {
   c->glue = glue;
   c->size = size;
   c->pos = 2;
-
+  if (red) {
+    tot_glue += glue;
+    learned++;
+  }
   for (int i = 0; i < size; i++)
     c->literals[i] = clause[i];
 

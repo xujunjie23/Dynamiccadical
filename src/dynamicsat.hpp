@@ -12,7 +12,7 @@
 #define DSAT_DECISION_CNT 100
 
 // DynamicSAT tuneable configurations
-#define DSAT_NO_CONFIGS 3
+#define DSAT_NO_CONFIGS 2
 #define DSAT_NO_ACTIONS 6
 
 extern const char* DSAT_CONFIG[DSAT_NO_CONFIGS]; 

@@ -2,23 +2,23 @@
 #include <cstdlib>
 
 const char* DSAT_CONFIG[DSAT_NO_CONFIGS] = {//配置项名称
-    "vivify", "vivifymaxeff", "vivifymineff" 
+    "chrono", "chronolevelim" 
 };
 
 const int DSAT_CONFIG_DEFAULT[DSAT_NO_CONFIGS] = {//每个配置项默认值
-    0, 100, 1
+    1, 100
 };
 
 const int DSAT_CONFIG_TYPE[DSAT_NO_CONFIGS] = {//每个配置项类型
-    BOOL_CONFIG, INT_CONFIG, INT_CONFIG
+    BOOL_CONFIG, INT_CONFIG
 };
 
 const int DSAT_CONFIG_MIN[DSAT_NO_CONFIGS] = {//最小值
-    0, 10, 1
+    0, 0
 };
 
 const int DSAT_CONFIG_MAX[DSAT_NO_CONFIGS] = {//最大值
-    0, 1000, 100
+    1, 1000
 };
 
 //根据给定action_val来生成布尔和整型配置项的值

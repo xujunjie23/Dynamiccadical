@@ -1,17 +1,6 @@
 #include "internal.hpp"
 #include "dynamicsat.hpp"
-#include "ccadical.h"  // 包含cadical_set_option声明的头文件
-#include <algorithm>
-
-#ifndef HAVE_STD_CLAMP
-namespace std {
-  template <typename T>
-  const T& clamp(const T& v, const T& lo, const T& hi) {
-    return (v < lo) ? lo : (hi < v) ? hi : v;
-  }
-}
-#endif
-
+#include "ccadical.h" 
 
 
 namespace CaDiCaL {
@@ -153,54 +142,53 @@ int Internal::decide () {
       notify_decision ();
     } else {//lit未被赋值，调用函数假设决策，推进trail
       LOG ("deciding assumption %d", lit);
-      search_assume_decision (lit);//默认赋值（若为x赋值1，若为-x赋值为0）
+      search_assume_decision (lit);
     }
-  } else if ((size_t) level == assumptions.size () && constraint.size ()) {//level刚好在assumptions时且constraint非空时，处理完索引假设变量，接下来要处理额外约束
+  } else if ((size_t) level == assumptions.size () && constraint.size ()) {
     
-    //遍历外部约束子句
-    int satisfied_lit = 0;  // The literal satisfying the constrain.如果子句已满足记录使约束满足的文字
-    int unassigned_lit = 0; // Highest score unassigned literal.还未满足，并有未赋值的变量，记录最高评分的未赋值文字
-    int previous_lit = 0;   // Move satisfied literals to the front.用于调整约束的文字顺序，可能为了优化后续处理
 
-    const size_t size_constraint = constraint.size ();//约束子句文字数量
+    int satisfied_lit = 0;  // The literal satisfying the constrain.
+    int unassigned_lit = 0; // Highest score unassigned literal.
+    int previous_lit = 0;   // Move satisfied literals to the front.
+
+    const size_t size_constraint = constraint.size ();
 
 #ifndef NDEBUG
     unsigned sum = 0;
     for (auto lit : constraint)
       sum += lit;
 #endif
-    for (size_t i = 0; i != size_constraint; i++) {//遍历约束子句中所有文字
-      //获取文字，并调整constraint[i]的顺序
+    for (size_t i = 0; i != size_constraint; i++) {
+
       // Get literal and move 'constraint[i] = constraint[i-1]'.
 
       int lit = constraint[i];
       constraint[i] = previous_lit;
       previous_lit = lit;
-      //实现数组后移一位，给未来找到的true文字腾出第一个位置
+ 
 
       const signed char tmp = val (lit);
       if (tmp < 0) {
         LOG ("constraint literal %d falsified", lit);
-        continue;//文字是false，继续遍历
+        continue;
       }
 
       if (tmp > 0) {
         LOG ("constraint literal %d satisfied", lit);
         satisfied_lit = lit;
-        break;//有任何一个文字是true，直接跳出循环，该子句已经满足
+        break;
       }
 
-      assert (!tmp);//未赋值
+      assert (!tmp);
       LOG ("constraint literal %d unassigned", lit);
 
       if (!unassigned_lit || better_decision (lit, unassigned_lit))
-        unassigned_lit = lit;//若lit比unassigned_lit更好，就更新unassigned_lit为lit
+        unassigned_lit = lit;
     }
 
-    if (satisfied_lit) {//子句已经满足
+    if (satisfied_lit) {
 
-      constraint[0] = satisfied_lit; // Move satisfied to the front.将该文字移到最前面，后续如果要检查，第一个就找到true了，方便一点
-
+      constraint[0] = satisfied_lit; // Move satisfied to the front.
       LOG ("literal %d satisfies constraint and "
            "is implied by assumptions",
            satisfied_lit);
@@ -210,13 +198,13 @@ int Internal::decide () {
       notify_decision ();
 
     } else {
-      //子句尚未满足，重新排列
+
       // Just move all the literals back.  If we found an unsatisfied
       // literal then it will be satisfied (most likely) at the next
       // decision and moved then to the first position.
 
       if (size_constraint) {
-        //将constraint中文字依次往前移一位，因为第一位还空着，复原一下
+   
         for (size_t i = 0; i + 1 != size_constraint; i++)
           constraint[i] = constraint[i + 1];
 
@@ -226,7 +214,7 @@ int Internal::decide () {
       if (unassigned_lit) {
 
         LOG ("deciding %d to satisfy constraint", unassigned_lit);
-        search_assume_decision (unassigned_lit);//赋值那个分最高的文字
+        search_assume_decision (unassigned_lit);
 
       } else {
 
@@ -253,18 +241,18 @@ int Internal::decide () {
       res = decide (); // STARTS and STOPS profiling
       START (decide);
     } else {
-      stats.decisions++;//统计决策次数
+      stats.decisions++;
 
       if (!decision) {
-        int idx = next_decision_variable ();//选择下一个未赋值变量
-        const bool target = (opts.target > 1 || (stable && opts.target));//启用极性优化策略，保持前一次赋值，或使用冲突学习得到的最佳极性
-        decision = decide_phase (idx, target);//确定赋值方向
+        int idx = next_decision_variable ();
+        const bool target = (opts.target > 1 || (stable && opts.target));
+        decision = decide_phase (idx, target);
       }
-      search_assume_decision (decision);//赋值会被推进到trail
+      search_assume_decision (decision);
     }
   }
   if (res)
-    marked_failed = false;//当前路径可行
+    marked_failed = false;
   STOP (decide);
   /************************************************************************************
     Dynamic SAT 
@@ -275,14 +263,24 @@ int delta_clauses_added = stats.current.redundant - last_clauses_added;
 int delta_clauses_deleted = stats.reductions - last_clauses_deleted;
 int change_score = delta_clauses_added + delta_clauses_deleted * 100;
 
+
 if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {
+  printf("num_decides_D: %d\n", num_decisions_D);
   if (learned)
-    avg_glue = (double)tot_glue / learned;
+    {printf("learned: %d\n", learned);
+    avg_glue = (double)tot_glue / learned;}
   else
     avg_glue = 0;
-
+  printf("avg_glue: %f\n", avg_glue);
+  
   int cur_action = rand() % tot_actions;
+  printf("cur_action: %d\n", cur_action);
   int* action_list = dsat_get_actions(cur_action);
+     
+  
+  assert(cur_action >= 0 && cur_action < tot_actions);
+  assert(action_list != nullptr);
+
   
   for (int i = 0; i < DSAT_NO_CONFIGS; i++) {
     if (DSAT_CONFIG_TYPE[i] == BOOL_CONFIG) {
@@ -295,29 +293,42 @@ if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {
       }
     } else if (DSAT_CONFIG_TYPE[i] == INT_CONFIG) {
       int config_value = cur_config_values[i];
+      if (config_value == 0) config_value = DSAT_INT_CONFIG_STEP; 
       config_value += (action_list[i] - 1) * DSAT_INT_CONFIG_STEP * config_value;
+      
   
-      // clamp 替代逻辑
+      
       if (config_value < DSAT_CONFIG_MIN[i]) {
         config_value = DSAT_CONFIG_MIN[i];
       } else if (config_value > DSAT_CONFIG_MAX[i]) {
         config_value = DSAT_CONFIG_MAX[i];
       }
-  
+      printf("config_value_new: %d\n", config_value);
       cadical_set_option(&opts, DSAT_CONFIG[i], config_value);
       cur_config_values[i] = config_value;
     }
   }
-  
+
 
   if (last_action >= 0) {
     mab_selected_D[last_action] += 1;
+    printf("mab_selected_D[%d]:  %.2f\n", last_action, mab_selected_D[last_action]);
     mab_reward_D[last_action] += (avg_glue > 5) ? 0 : (5 - avg_glue);
+    printf("mab_reward_D[%d]:  %.2f\n", last_action, mab_reward_D[last_action]);
     learned = 0;
     tot_glue = 0;
   }
   last_action = cur_action;
-} else if (num_decisions_D >= DSAT_SAMPLE_CNT && (change_score > DSAT_CHANGE_THRESHOLD || mab_in_process < DSAT_SAMPLE_CNT)) {
+} 
+
+
+
+
+
+
+else if (num_decisions_D >= DSAT_SAMPLE_CNT && (change_score > DSAT_CHANGE_THRESHOLD || mab_in_process < DSAT_SAMPLE_CNT)) {
+  printf("over");
+
   if (change_score > DSAT_CHANGE_THRESHOLD) {
     last_clauses_added = stats.current.redundant;
     last_clauses_deleted = stats.reductions;
@@ -333,13 +344,17 @@ if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {
     else
       avg_glue = 0;
   }
+  //printf("avg_glue_mab: %f\n", avg_glue);
 
   int cur_action = weightedRandom(ucb_D, tot_actions);
+  //printf("cur_action_mab: %d\n", cur_action);
   num_of_sampling_D += 1;
   int* action_list = dsat_get_actions(cur_action);
   
+  
   for (int i = 0; i < DSAT_NO_CONFIGS; i++) {
     if (DSAT_CONFIG_TYPE[i] == BOOL_CONFIG) {
+      //printf("mab_action_list[%d]: %d\n", i, action_list[i]);
       if (action_list[i] == 0) {
         cadical_set_option(&opts, DSAT_CONFIG[i], 0);
         cur_config_values[i] = 0;
@@ -349,19 +364,23 @@ if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {
       }
     } else if (DSAT_CONFIG_TYPE[i] == INT_CONFIG) {
       int config_value = cur_config_values[i];
+      //printf("mab_config_value_before: %d\n", config_value);     
+      if (config_value == 0) config_value = DSAT_INT_CONFIG_STEP; // or some safe default
+      //printf("mab_action_list[%d]: %d\n", i, action_list[i]);
       config_value += (action_list[i] - 1) * DSAT_INT_CONFIG_STEP * config_value;
   
-      // clamp 替代逻辑
+      
       if (config_value < DSAT_CONFIG_MIN[i]) {
         config_value = DSAT_CONFIG_MIN[i];
       } else if (config_value > DSAT_CONFIG_MAX[i]) {
         config_value = DSAT_CONFIG_MAX[i];
       }
-  
+      //printf("mab_config_value_new: %d\n", config_value);
       cadical_set_option(&opts, DSAT_CONFIG[i], config_value);
       cur_config_values[i] = config_value;
     }
   }
+
 
   if (last_action >= 0) {
     mab_selected_D[last_action] += 1;
@@ -371,12 +390,19 @@ if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {
   }
   last_action = cur_action;
 
+
   for (int i = 0; i < tot_actions; i++) {
-    ucb_D[i] = mab_reward_D[i] / mab_selected_D[i] + sqrt(log(num_of_sampling_D) / mab_selected_D[i]);
+    if (mab_selected_D[i] == 0) {
+      ucb_D[i] = 1e9;  
+    } else {
+      ucb_D[i] = mab_reward_D[i] / mab_selected_D[i] + sqrt(log(num_of_sampling_D) / mab_selected_D[i]);
+    }
+    
   }
 }
 
 num_decisions_D += 1;
+
 unsigned tot_change_score = stats.current.redundant - last_clauses_added + (stats.reductions - last_clauses_deleted) * 100;
 if (tot_change_score > mab_reset_threshold) {
   mab_reset_threshold += (stats.current.irredundant + stats.current.redundant) * 10;
