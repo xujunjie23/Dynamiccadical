@@ -75,7 +75,8 @@ int Options::set_option_by_pointer(const Option *opt, int value) {
 int Options::cadical_options_set(Options *options, const char *name, int value) {
   Option *opt = Options::has(name);  // 查找名字对应的 Option*
   if (!opt)
-    return 0;                        // 如果找不到，返回 0 表示失败
+    return 0;
+  printf("success");                  // 如果找不到，返回 0 表示失败
   return options->set_option_by_pointer(opt, value);  // 设置并返回旧值
 }
 

@@ -266,8 +266,10 @@ int change_score = delta_clauses_added + delta_clauses_deleted * 100;//计算最
 
 // Step 1. Sampling采样，决策数小于DSAT_SAMPLE_CNT且每100次进行一次采样
 if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {//决策上限100000，每100次采样一次，也就是决策100次换一下配置
+  printf("num_decides_D: %d\n", num_decisions_D);
   if (learned)
-    avg_glue = (double)tot_glue / learned;//计算采样奖励（平均粘合度）,累计glue总和/当前学到的新冲突子句数量。越低越好，助于剪枝
+    {printf("learned: %d\n", learned);
+    avg_glue = (double)tot_glue / learned;}//计算采样奖励（平均粘合度）,累计glue总和/当前学到的新冲突子句数量。越低越好，助于剪枝
   else
     avg_glue = 0;
   printf("avg_glue: %f\n", avg_glue);
@@ -283,7 +285,6 @@ if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {//决策�
   //遍历所有配置，每个配置都更新
   for (int i = 0; i < DSAT_NO_CONFIGS; i++) {
     if (DSAT_CONFIG_TYPE[i] == BOOL_CONFIG) {//对于bool，采样会决定是将其值设为 0 还是 1
-      printf("action_list[%d]: %d\n", i, action_list[i]);
       if (action_list[i] == 0) {//如果动作选择了“0”，也就是关闭这个配置
         cadical_set_option(&opts, DSAT_CONFIG[i], 0);//真正修改求解器配置值
         cur_config_values[i] = 0;
@@ -293,10 +294,7 @@ if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {//决策�
       }
     } else if (DSAT_CONFIG_TYPE[i] == INT_CONFIG) {//调整整数类型配置的值
       int config_value = cur_config_values[i];//获取当前整型值
-      printf("config_value_before: %d\n", config_value);
-
       if (config_value == 0) config_value = DSAT_INT_CONFIG_STEP; // or some safe default
-      printf("action_list[%d]: %d\n", i, action_list[i]);
       config_value += (action_list[i] - 1) * DSAT_INT_CONFIG_STEP * config_value;//0-1=-1（减小）；1-1=0（不变）；2-1=1（增加）
       
   
@@ -312,15 +310,14 @@ if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {//决策�
     }
   }
 
-  free(action_list);
   //@@@@@@@@@@@@@@@@其实某个动作就是一个整数，代表一种调整策略@@@@@@@@@@@@@@@@
   
   // Update MAB根据当前奖励和选择次数，更新MAB状态
   if (last_action >= 0) {//如果上一次执行了某个动作
     mab_selected_D[last_action] += 1;
-    printf("mab_selected_D[%d]: %d\n", last_action, mab_selected_D[last_action]);
+    printf("mab_selected_D[%d]:  %.2f\n", last_action, mab_selected_D[last_action]);
     mab_reward_D[last_action] += (avg_glue > 5) ? 0 : (5 - avg_glue);//当前glue>5质量不好，越小，5-glue就越大，奖励就越高
-    printf("mab_reward_D[%d]: %d\n", last_action, mab_reward_D[last_action]);
+    printf("mab_reward_D[%d]:  %.2f\n", last_action, mab_reward_D[last_action]);
     learned = 0;
     tot_glue = 0;
   }
@@ -333,6 +330,7 @@ if (num_decisions_D < DSAT_SAMPLE_CNT && num_decisions_D % 100 == 0) {//决策�
 
 // Step 2. Decision 首先在1000次采样，也就是100000决策后才启用mab，启用mab后如果公式变化太大就要重置一下轮次，轮次要足够（100000）才停止mab，不同于上面，现在决策一次改一次配置
 else if (num_decisions_D >= DSAT_SAMPLE_CNT && (change_score > DSAT_CHANGE_THRESHOLD || mab_in_process < DSAT_SAMPLE_CNT)) {
+  printf("over");
   //若变更分数超过阈值，则重置mab
   if (change_score > DSAT_CHANGE_THRESHOLD) {//若change_score过大，说明最近配置对sat公式影响较大
     last_clauses_added = stats.current.redundant;
@@ -349,17 +347,17 @@ else if (num_decisions_D >= DSAT_SAMPLE_CNT && (change_score > DSAT_CHANGE_THRES
     else
       avg_glue = 0;
   }
-  printf("avg_glue_mab: %f\n", avg_glue);
+  //printf("avg_glue_mab: %f\n", avg_glue);
   //使用 weightedRandom 来根据配置的加权概率随机选择一个动作
   int cur_action = weightedRandom(ucb_D, tot_actions);//加权随机，不同于上面的普通随机，偏向高奖励
-  printf("cur_action_mab: %d\n", cur_action);
+  //printf("cur_action_mab: %d\n", cur_action);
   num_of_sampling_D += 1;//选的动作+1次数
   int* action_list = dsat_get_actions(cur_action);//一样获取动作的调整方向
   
   //和上面一模一样
   for (int i = 0; i < DSAT_NO_CONFIGS; i++) {
     if (DSAT_CONFIG_TYPE[i] == BOOL_CONFIG) {
-      printf("mab_action_list[%d]: %d\n", i, action_list[i]);
+      //printf("mab_action_list[%d]: %d\n", i, action_list[i]);
       if (action_list[i] == 0) {
         cadical_set_option(&opts, DSAT_CONFIG[i], 0);
         cur_config_values[i] = 0;
@@ -369,9 +367,9 @@ else if (num_decisions_D >= DSAT_SAMPLE_CNT && (change_score > DSAT_CHANGE_THRES
       }
     } else if (DSAT_CONFIG_TYPE[i] == INT_CONFIG) {
       int config_value = cur_config_values[i];
-      printf("mab_config_value_before: %d\n", config_value);     
+      //printf("mab_config_value_before: %d\n", config_value);     
       if (config_value == 0) config_value = DSAT_INT_CONFIG_STEP; // or some safe default
-      printf("mab_action_list[%d]: %d\n", i, action_list[i]);
+      //printf("mab_action_list[%d]: %d\n", i, action_list[i]);
       config_value += (action_list[i] - 1) * DSAT_INT_CONFIG_STEP * config_value;
   
       
@@ -380,7 +378,7 @@ else if (num_decisions_D >= DSAT_SAMPLE_CNT && (change_score > DSAT_CHANGE_THRES
       } else if (config_value > DSAT_CONFIG_MAX[i]) {
         config_value = DSAT_CONFIG_MAX[i];
       }
-      printf("mab_config_value_new: %d\n", config_value);
+      //printf("mab_config_value_new: %d\n", config_value);
       cadical_set_option(&opts, DSAT_CONFIG[i], config_value);
       cur_config_values[i] = config_value;
     }
